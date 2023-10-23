@@ -316,7 +316,7 @@ function populateKanbanColumns() {
             KANBAN_COLUMNS[index] = columnText;
         }
     })
-s
+
 }
 
 function addPRLabels() {

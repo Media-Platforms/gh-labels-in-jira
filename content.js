@@ -41,6 +41,11 @@ chrome.storage.sync.get({
     FF_PRIDE = items.ff_pride;
     awesome_loading = items.awesome_loading;
 
+    // Don't run on boards/#/timeline or /backlog
+    if (window.location.href.match(/boards\/\d+\/(.*)/) !== null) {
+        return;
+    }
+
     if (items.pr_columns) {
         PR_COLUMNS = items.pr_columns
             .split(",")
@@ -61,8 +66,9 @@ window.addEventListener("message", function (event) {
         return;
     switch (event.data.type) {
         case "refreshPRs":
-            $("[data-issue-id='" + event.data.params.issueKey + "']").find(".gh-labels-in-jira-wrapper").remove();
-            populateIssueCard($("[data-issue-id='" + event.data.params.issueKey + "']"));
+            const card = $("[id='" + event.data.params.issueKey + "']");
+            card.find(".gh-labels-in-jira-wrapper").remove();
+            populateIssueCard(card);
             break;
     }
 });
@@ -75,7 +81,7 @@ function populateIssueCard(card) {
                 $(card).find("[class*=_footerChildSection]").eq(1).append("<span class=\"ghx-field gh-labels-in-jira\" data-tooltip=\"0 pull requests\">" + NO_PR_ICON + "</span>");
         } else {
             if ($(card).find(".gh-labels-in-jira").length == 0)
-                $(card).find("[class*=_footerChildSection]").eq(1).append("<span class=\"ghx-field gh-labels-in-jira\" style=\"cursor:pointer;\" data-tooltip=\"" + data.detail[0].pullRequests.length + " pull request(s)\" onclick=\"event.stopPropagation();window.postMessage({ type: 'refreshPRs', params: { issueKey: '" + $(card).attr("data-rbd-draggable-id")?.split("::")?.[1] + "'} }, '*');\">" + PR_ICON + "</span>");
+                $(card).find("[class*=_footerChildSection]").eq(1).append("<span class=\"ghx-field gh-labels-in-jira\" style=\"cursor:pointer;\" data-tooltip=\"" + data.detail[0].pullRequests.length + " pull request(s)\" onclick=\"event.stopPropagation();window.postMessage({ type: 'refreshPRs', params: { issueKey: '" + $(card).attr("id") + "'} }, '*');\">" + PR_ICON + "</span>");
 
             var prIcon = $(card).find(".ghx-field .gh-labels-in-jira");
             $(card).find("[class*=_content]").append("<div class=\"gh-labels-in-jira-wrapper\"></div>");

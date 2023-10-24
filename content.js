@@ -3,7 +3,7 @@
 // set extension defaults here
 var ACCESS_TOKEN = "";
 var HIDE_CLOSED_PRS = false;
-var HIDE_LABELS_ON_CLOSED_PRS = true;
+var HIDE_MERGED_PRS = false;
 var FF_CODE_REVIEWERS = false;
 var SHOW_ALL_COLUMNS = false;
 var FF_PRIDE = false;
@@ -24,7 +24,7 @@ var LOADING_ICON = "<div class=\"loading-container\" style=\"margin-left:30%;\" 
 // get settings for the chrome extension
 chrome.storage.sync.get({
     github_access_token: "",
-    hide_labels_on_closed_prs: true,
+    hide_merged_prs: false,
     hide_closed_prs: false,
     pr_columns: "",
     ff_code_reviewers: false,
@@ -35,7 +35,7 @@ chrome.storage.sync.get({
 }, function (items) {
     ACCESS_TOKEN = items.github_access_token;
     HIDE_CLOSED_PRS = items.hide_closed_prs;
-    HIDE_LABELS_ON_CLOSED_PRS = items.hide_labels_on_closed_prs;
+    HIDE_MERGED_PRS = items.hide_merged_prs;
     FF_CODE_REVIEWERS = items.ff_code_reviewers;
     SHOW_ALL_COLUMNS = items.show_all_columns;
     FF_PRIDE = items.ff_pride;
@@ -87,18 +87,25 @@ function populateIssueCard(card) {
             $(card).find("[class*=_content]").append("<div class=\"gh-labels-in-jira-wrapper\"></div>");
             var wrapper = $(card).find(".gh-labels-in-jira-wrapper");
 
-            // heading for pull requests
-            $(wrapper).append("<div class=\"pr-heading\">Pull Requests</div>");
-
             var cardId = $(card).attr("id");
+
+            var hasHeader = false;
 
             $.each(data.detail[0].pullRequests, function () {
                 var prid = this.id;
                 var owner = this.url.split("/")[3];
                 var repo = this.url.split("/")[4];
 
+                // Hide both declined and merged PRs if HIDE_CLOSED_PRS
+                const hideLabels = this.status == "DECLINED" && HIDE_CLOSED_PRS || this.status == "MERGED" && HIDE_MERGED_PRS;
 
-                if (this.status != "DECLINED" || !HIDE_CLOSED_PRS) {
+                // Apply the header, only if we have at least one label
+                if (!hideLabels && hasHeader === false) {
+                    hasHeader = true;
+                    $(wrapper).append("<div class=\"pr-heading\">Pull Requests</div>");
+                }
+                
+                if (!hideLabels) {
                     var pullRequestNode = document.createElement("div");
                     pullRequestNode.classList.add("pullRequestNode");
                     pullRequestNode.setAttribute("data-ticket-pull-id", cardId.replace("card-", "") + "-" + prid.replace("#", ""));
@@ -109,57 +116,53 @@ function populateIssueCard(card) {
 
                     $(pullRequestNode).append("<span class=\"repo-name\">" + repo + "</span>");
 
+                    var buildURL = "https://api.github.com/repos/" + owner + "/" + repo + "/pulls/" + this.id.replace("#", "");
 
-                    if (this.status != "DECLINED" || (HIDE_LABELS_ON_CLOSED_PRS == false && HIDE_CLOSED_PRS == false)) {
-                        var buildURL = "https://api.github.com/repos/" + owner + "/" + repo + "/pulls/" + this.id.replace("#", "");
+                    $.ajax({
+                        url: buildURL,
+                        type: 'GET',
+                        dataType: 'json',
+                        success: function (data) {
+                            if (data.total_count != 0) {
 
-                        $.ajax({
-                            url: buildURL,
-                            type: 'GET',
-                            dataType: 'json',
-                            success: function (data) {
-                                if (data.total_count != 0) {
+                                var pull_id = data.id;
+                                $.each(data.labels, function () {
+                                    var label_id = cardId.replace("card-", "") + "-" + pull_id + "-" + this.id;
 
-                                  var pull_id = data.id;
-                                  $.each(data.labels, function () {
-                                      var label_id = cardId.replace("card-", "") + "-" + pull_id + "-" + this.id;
+                                    var labelNode = document.createElement("div");
+                                    labelNode.setAttribute("data-label-id", label_id);
+                                    labelNode.setAttribute("style", "background-color: #" + this.color + ";color: " + idealTextColor("#" + this.color) + ";");
 
-                                      var labelNode = document.createElement("div");
-                                      labelNode.setAttribute("data-label-id", label_id);
-                                      labelNode.setAttribute("style", "background-color: #" + this.color + ";color: " + idealTextColor("#" + this.color) + ";");
+                                    if (FF_PRIDE && (new Date().getMonth() == 5) && this.name.toLowerCase() == "ready to merge") {
+                                        labelNode.setAttribute("style", "background: linear-gradient(124deg, #ff2400, #e81d1d, #e8b71d, #e3e81d, #1de840, #1ddde8, #2b1de8, #dd00f3, #dd00f3);color:white;");
+                                    }
 
-                                      if (FF_PRIDE && (new Date().getMonth() == 5) && this.name.toLowerCase() == "ready to merge") {
-                                          labelNode.setAttribute("style", "background: linear-gradient(124deg, #ff2400, #e81d1d, #e8b71d, #e3e81d, #1de840, #1ddde8, #2b1de8, #dd00f3, #dd00f3);color:white;");
-                                      }
+                                    labelNode.classList.add("pull-request-label");
+                                    labelNode.textContent = this.name;
 
-                                      labelNode.classList.add("pull-request-label");
-                                      labelNode.textContent = this.name;
+                                    if (FF_CODE_REVIEWERS && (this.name == "In Code Review" || this.name == "Ready for Code Review")) {
+                                        addCodeReviewers(owner, repo, prid.replace("#", ""), label_id, data.requested_reviewers, labelNode, data.user.login);
+                                    }
 
-                                      if (FF_CODE_REVIEWERS && (this.name == "In Code Review" || this.name == "Ready for Code Review")) {
-                                          addCodeReviewers(owner, repo, prid.replace("#", ""), label_id, data.requested_reviewers, labelNode, data.user.login);
-                                      }
+                                    $(pullRequestNode).append(labelNode);
 
-                                      $(pullRequestNode).append(labelNode);
+                                })
 
-                                  })
+                                $(wrapper).append(pullRequestNode);
 
-                                  $(wrapper).append(pullRequestNode);
-
-                                }
-                              },
-                              beforeSend: setGitHubAccessHeader
-                            });
-
-                          }
-
-                        }
+                            }
+                            },
+                            beforeSend: setGitHubAccessHeader
                     });
-                }
-            // store all the stuff we added so we don't have to go through all this over again
-            MEMOIZED_CARDS[cardId] = [prIcon, wrapper];
-        });
 
-    }
+                }
+            });
+        }
+        // store all the stuff we added so we don't have to go through all this over again
+        MEMOIZED_CARDS[cardId] = [prIcon, wrapper];
+    });
+
+}
 
 function setGitHubAccessHeader(xhr) {
   xhr.setRequestHeader('Authorization', 'token ' + ACCESS_TOKEN);

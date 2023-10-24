@@ -3,7 +3,7 @@
 // Saves options to chrome.storage
 function save_options() {
     var github_access_token = document.getElementById('github_access_token').value;
-    var hide_labels_on_closed_prs = document.getElementById('hide_labels_on_closed_prs').checked;
+    var hide_merged_prs = document.getElementById('hide_merged_prs').checked;
     var hide_closed_prs = document.getElementById('hide_closed_prs').checked;
     var pr_columns = document.getElementById('pr_columns').value;
     var ff_code_reviewers = document.getElementById('ff_code_reviewers').checked;
@@ -13,7 +13,7 @@ function save_options() {
 
     chrome.storage.sync.set({
         github_access_token: github_access_token,
-        hide_labels_on_closed_prs: hide_labels_on_closed_prs,
+        hide_merged_prs: hide_merged_prs,
         hide_closed_prs: hide_closed_prs,
         pr_columns: pr_columns,
         ff_code_reviewers: ff_code_reviewers,
@@ -35,7 +35,7 @@ function save_options() {
 function restore_options() {
     chrome.storage.sync.get({
         github_access_token: '',
-        hide_labels_on_closed_prs: true,
+        hide_merged_prs: true,
         hide_closed_prs: false,
         pr_columns: 'In Review, Github Review',
         ff_code_reviewers: false,
@@ -44,7 +44,7 @@ function restore_options() {
         awesome_loading: false
     }, function (items) {
         document.getElementById('github_access_token').value = items.github_access_token;
-        document.getElementById('hide_labels_on_closed_prs').checked = items.hide_labels_on_closed_prs;
+        document.getElementById('hide_merged_prs').checked = items.hide_merged_prs;
         document.getElementById('hide_closed_prs').checked = items.hide_closed_prs;
         document.getElementById('pr_columns').value = items.pr_columns;
         document.getElementById('ff_code_reviewers').checked = items.ff_code_reviewers;

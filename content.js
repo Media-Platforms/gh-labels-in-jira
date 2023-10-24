@@ -292,8 +292,8 @@ function fetchCards(mutations) {
             loadAwesomely(cardNode);
         }
         
-        if (MEMOIZED_CARDS[cardNode]) {
-            const [prIcon, wrapper] = MEMOIZED_CARDS[cardNode];
+        if (MEMOIZED_CARDS[cardNode.id]) {
+            const [prIcon, wrapper] = MEMOIZED_CARDS[cardNode.id];
 
             $(cardNode).find("[class*=_footerChildSection]").eq(1).append(prIcon);
             $(cardNode).find("[class*=_content]").append(wrapper);

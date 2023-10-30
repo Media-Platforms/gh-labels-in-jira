@@ -1,3 +1,8 @@
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
 .code-review {
     position: relative;
     cursor: default;
@@ -48,7 +53,8 @@
     height: 20px;
     padding: 0.15em 4px;
     font-size: 12px;
-    font-weight: 600 line-height:15px;
+    font-weight: 600; 
+    line-height:15px;
     border-radius: 2px;
 }
 
@@ -64,4 +70,12 @@
     font-weight: 500;
     font-size: 12px;
     margin-bottom: 5px;
+}
+
+.loading-icon {
+    animation: spin 2s linear infinite;
+    border-radius: 50%;
+    height:40px;
+    width:40px;
+    margin-left: 10%;
 }
